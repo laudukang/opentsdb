@@ -17,7 +17,8 @@ GWT_VERSION := 2.6.0
 
 GWT_DEV_VERSION := $(GWT_VERSION)
 GWT_DEV := third_party/gwt/gwt-dev-$(GWT_DEV_VERSION).jar
-GWT_DEV_BASE_URL := http://central.maven.org/maven2/com/google/gwt/gwt-dev/$(GWT_DEV_VERSION)
+#GWT_DEV_BASE_URL := http://central.maven.org/maven2/com/google/gwt/gwt-dev/$(GWT_DEV_VERSION)
+GWT_DEV_BASE_URL := http://c2/$(GWT_DEV_VERSION)
 
 $(GWT_DEV): $(GWT_DEV).md5
 	set dummy "$(GWT_DEV_BASE_URL)" "$(GWT_DEV)"; shift; $(FETCH_DEPENDENCY)

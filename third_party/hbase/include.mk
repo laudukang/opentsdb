@@ -15,7 +15,7 @@
 
 ASYNCHBASE_VERSION := 1.8.2
 ASYNCHBASE := third_party/hbase/asynchbase-$(ASYNCHBASE_VERSION).jar
-ASYNCHBASE_BASE_URL := http://central.maven.org/maven2/org/hbase/asynchbase/$(ASYNCHBASE_VERSION)
+ASYNCHBASE_BASE_URL := http://192.168.3.20:9091/repository/maven-releases/org/hbase/asynchbase/$(ASYNCHBASE_VERSION)
 
 $(ASYNCHBASE): $(ASYNCHBASE).md5
 	set dummy "$(ASYNCHBASE_BASE_URL)" "$(ASYNCHBASE)"; shift; $(FETCH_DEPENDENCY)

@@ -932,7 +932,18 @@ class HttpJsonSerializer extends HttpSerializer {
     for (DataPoints[] separate_dps : results) {
       for (DataPoints dps : separate_dps) {
         try {
-          cb_chain.addCallback(new DPsResolver(dps));
+          //filter empty dps, laudukang
+          boolean hasDps = false;
+          for (final DataPoint dp : dps) {
+            if (dp.timestamp() >= data_query.startTime() &&
+                    dp.timestamp() <= data_query.endTime()) {
+              hasDps = true;
+              break;
+            }
+          }
+          if (hasDps) {
+            cb_chain.addCallback(new DPsResolver(dps));
+          }
         } catch (Exception e) {
           throw new RuntimeException("Unexpected error durring resolution", e);
         }

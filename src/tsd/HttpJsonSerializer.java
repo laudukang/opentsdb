@@ -57,6 +57,16 @@ import net.opentsdb.tsd.QueryRpc.LastPointQuery;
 import net.opentsdb.utils.Config;
 import net.opentsdb.utils.DateTime;
 import net.opentsdb.utils.JSON;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferOutputStream;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the base serializer class with JSON as the format
@@ -645,7 +655,8 @@ class HttpJsonSerializer extends HttpSerializer {
     final long start = DateTime.currentTimeMillis();
     final boolean as_arrays = this.query.hasQueryStringParam("arrays");
     final String jsonp = this.query.getQueryStringParam("jsonp");
-    
+    final long limit = data_query.getLimit();
+
     // buffers and an array list to stored the deferreds
     final ChannelBuffer response = ChannelBuffers.dynamicBuffer();
     final OutputStream output = new ChannelBufferOutputStream(response);
@@ -659,7 +670,8 @@ class HttpJsonSerializer extends HttpSerializer {
     }
     
     // start the JSON generator and write the opening array
-    final JsonGenerator json = JSON.getFactory().createGenerator(output);
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    final JsonGenerator json = JSON.getFactory().createGenerator(limit > 0 ? stream : output);
     json.writeStartArray();
  
     /**
@@ -973,7 +985,11 @@ class HttpJsonSerializer extends HttpSerializer {
         // IMPORTANT Make sure the close the JSON array and the generator
         json.writeEndArray();
         json.close();
-        
+
+        if (limit > 0) {
+          sortDps(limit, stream, output);
+        }
+
         if (jsonp != null && !jsonp.isEmpty()) {
           output.write(")".getBytes());
         }
@@ -985,7 +1001,49 @@ class HttpJsonSerializer extends HttpSerializer {
     cb_chain.callback(null);
     return cb_chain.addCallback(new FinalCB());
   }
-  
+
+  @SuppressWarnings("unchecked")
+  private void sortDps(long limit, ByteArrayOutputStream stream, OutputStream output) throws IOException {
+    byte[] content = stream.toByteArray();
+    TypeReference<List<Map<String, Object>>> typeReference = new TypeReference<List<Map<String, Object>>>() {
+    };
+
+    List<Map<String, Object>> dataList = JSON.parseToObject(content, typeReference);
+
+    List<Map<String, Object>> resultMapList = dataList.stream()
+            .filter(m -> !m.containsKey("metric"))
+            .collect(Collectors.toList());
+
+    List<Map<String, Object>> metricNodeMapList = dataList.stream()
+            .filter(m -> m.containsKey("metric"))
+            .collect(Collectors.toList());
+
+    //sum dps for sort
+    metricNodeMapList.forEach(m -> {
+      double value = ((Map<String, Object>) m.get("dps")).values().stream()
+              .mapToDouble(i -> {
+                if (i instanceof Integer) {
+                  return ((Integer) i).doubleValue();
+                }
+                return (double) i;
+              })
+              .sum();
+
+      m.put("sumDps", value);
+    });
+
+    Comparator<Map<String, Object>> dpsSorter = Comparator.comparingDouble(m -> (double) m.get("sumDps"));
+    List<Map<String, Object>> metricLimitNodeMapList = metricNodeMapList.stream()
+            .sorted(dpsSorter.reversed()).limit(limit)
+            .collect(Collectors.toList());
+
+    resultMapList.addAll(metricLimitNodeMapList);
+
+
+    final JsonGenerator json = JSON.getFactory().createGenerator(output);
+    json.writeObject(resultMapList);
+  }
+
   /**
    * Format a list of last data points
    * @param data_points The results of the query

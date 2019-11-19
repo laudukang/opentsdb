@@ -107,6 +107,8 @@ public final class TSQuery {
   
   /** Override default max row count limit */
   private boolean override_data_point_limit;
+
+  private long limit;
   
   /**
    * Default constructor necessary for POJO de/serialization
@@ -122,7 +124,7 @@ public final class TSQuery {
     // We also don't care about stats or summary
     return Objects.hashCode(start, end, timezone, use_calendar, options, padding, 
         no_annotations, with_global_annotations, show_tsuids, queries, 
-        ms_resolution);
+        ms_resolution, limit);
   }
   
   @Override
@@ -151,7 +153,8 @@ public final class TSQuery {
         && Objects.equal(with_global_annotations, query.with_global_annotations)
         && Objects.equal(show_tsuids, query.show_tsuids)
         && Objects.equal(queries, query.queries)
-        && Objects.equal(ms_resolution, query.ms_resolution);
+        && Objects.equal(ms_resolution, query.ms_resolution)
+        && Objects.equal(limit, query.limit);
   }
   
   /**
@@ -304,6 +307,7 @@ public final class TSQuery {
         }
       }
     }
+    buf.append(", limit=").append(limit);
     buf.append("])");
     return buf.toString();
   }
@@ -513,4 +517,11 @@ public final class TSQuery {
     this.override_data_point_limit = override_data_point_limit;
   }
 
+  public long getLimit() {
+    return limit;
+  }
+
+  public void setLimit(long limit) {
+    this.limit = limit;
+  }
 }

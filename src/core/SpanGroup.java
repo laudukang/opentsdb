@@ -679,4 +679,21 @@ final class SpanGroup implements DataPoints {
     
     return Deferred.group(deferreds).addCallback(new GroupCB());
   }
+
+  @Override
+  public Number sumDps() {
+    Number number = 0;
+    for (DataPoint dp : this) {
+      if (dp.isInteger()) {
+        number = number.longValue() + dp.longValue();
+      } else {
+        // Report missing intervals as null or NaN.
+        final double value = dp.doubleValue();
+        if (!Double.isNaN(value)) {
+          number = number.doubleValue() + dp.doubleValue();
+        }
+      }
+    }
+    return number;
+  }
 }

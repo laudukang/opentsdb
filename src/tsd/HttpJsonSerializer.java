@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 /**
  * Implementation of the base serializer class with JSON as the format
@@ -940,20 +941,32 @@ class HttpJsonSerializer extends HttpSerializer {
     // chain so that when one DPsResolver is finished, it triggers the next to
     // start serializing.
     final Deferred<Object> cb_chain = new Deferred<Object>();
+    TreeSet<Number> numberTreeSet = LongStream.range(0 - limit, 0).mapToDouble(i -> 1.0 * i).boxed().collect(Collectors.toCollection(TreeSet::new));
 
     for (DataPoints[] separate_dps : results) {
       for (DataPoints dps : separate_dps) {
         try {
           //filter empty dps, laudukang
-          boolean hasDps = false;
-          for (final DataPoint dp : dps) {
-            if (dp.timestamp() >= data_query.startTime() &&
-                    dp.timestamp() <= data_query.endTime()) {
-              hasDps = true;
-              break;
+          boolean isDpsOk = false;
+
+          if (limit > 0) {
+            Number dpsSum = dps.sumDps();
+            if (numberTreeSet.first().doubleValue() < dpsSum.doubleValue()) {
+              numberTreeSet.pollFirst();
+              numberTreeSet.add(dpsSum.doubleValue());
+              isDpsOk = true;
+            }
+          } else {
+            for (final DataPoint dp : dps) {
+              if (dp.timestamp() >= data_query.startTime() &&
+                      dp.timestamp() <= data_query.endTime()) {
+                isDpsOk = true;
+                break;
+              }
             }
           }
-          if (hasDps) {
+
+          if (isDpsOk) {
             cb_chain.addCallback(new DPsResolver(dps));
           }
         } catch (Exception e) {

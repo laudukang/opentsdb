@@ -237,4 +237,9 @@ public interface DataPoints extends Iterable<DataPoint> {
    * @since 2.4
    */
   float getPercentile();
+
+  default Number sumDps() {
+    return 0;
+  }
+
 }

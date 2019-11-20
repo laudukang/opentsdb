@@ -949,20 +949,22 @@ class HttpJsonSerializer extends HttpSerializer {
           //filter empty dps, laudukang
           boolean isDpsOk = false;
 
-          if (limit > 0) {
+          for (final DataPoint dp : dps) {
+            if (dp.timestamp() >= data_query.startTime() &&
+                    dp.timestamp() <= data_query.endTime()) {
+              isDpsOk = true;
+              break;
+            }
+          }
+
+          if (isDpsOk && limit > 0) {
             Number dpsSum = dps.sumDps();
             if (numberTreeSet.first().doubleValue() < dpsSum.doubleValue()) {
               numberTreeSet.pollFirst();
               numberTreeSet.add(dpsSum.doubleValue());
-              isDpsOk = true;
-            }
-          } else {
-            for (final DataPoint dp : dps) {
-              if (dp.timestamp() >= data_query.startTime() &&
-                      dp.timestamp() <= data_query.endTime()) {
-                isDpsOk = true;
-                break;
-              }
+            } else {
+              //filter
+              isDpsOk = false;
             }
           }
 
